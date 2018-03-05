@@ -3,8 +3,11 @@ package Program;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
+import java.net.URLConnection;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -65,6 +68,7 @@ public class Retrieval {
 	}
 	//Helper class to save the image from the given URL
 	public static void saveImage(String imageUrl, String destinationFile) throws IOException {
+//		System.out.println("Image URL: " + imageUrl);
 		URL url = new URL(imageUrl);
 		InputStream is = url.openStream();
 		OutputStream os = new FileOutputStream(destinationFile);
@@ -78,15 +82,16 @@ public class Retrieval {
 
 		is.close();
 		os.close();
+		
 	}
 
     public static void main(String[] args) throws Exception {
         // CRAWLING MECHANISM
         java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(java.util.logging.Level.OFF);
         String mainUrl = "http://realestate.com.au";
-        String START_URL = "http://realestate.com.au/buy/in-brisbane+-+greater+region,+qld/list-1";
+        String START_URL = "https://www.realestate.com.au/buy/property-villa-townhouse-unit+apartment-house-in-brisbane+-+greater+region,+qld/list-1";
         int propId = 1;
-        int maxDepth = 50;
+        int maxDepth = 500;
         int resultPerPage = 20;
         String mainDirectory = "/Users/yanuarwicaksana/Documents/COMP7802-Thesis/NewRetrieval";
         List<String> crawledPage = new ArrayList();
@@ -98,72 +103,190 @@ public class Retrieval {
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
         //List<List> Images = new ArrayList();
     	Map<String,String> featureMap = new HashMap<String,String>();
+    	int depthcount = 1;
         try {
         	while(maxDepth > 0){
-        		
+        		System.out.println("Depth Count: " + Integer.toString(depthcount));
+        		depthcount++;
 	            HtmlPage page = webClient.getPage(crawledPage.get(0));
-	            List<HtmlAnchor> address = page.getByXPath("//a[@rel='listingName']");
-	            System.out.println("address size: " + Integer.toString(address.size()));
-	            System.out.println(address);
-	            List<HtmlParagraph> price = page.getByXPath("//p[@class='priceText']");
-//	            System.out.println("price size: " + Integer.toString(price.size()));
-	            List<HtmlDefinitionList> features = page.getByXPath("//dl[@class='rui-property-features rui-clearfix']");
-//	            System.out.println("features size: " + Integer.toString(features.size()));
-	            List<HtmlDivision> container = page.getByXPath("//div[@class='strip']");
-//	            System.out.println("image size: " + Integer.toString(container.size()));
-	            List<HtmlListItem> nextPage = page.getByXPath("//li[@class='nextLink']");
-	            List<HtmlAnchor> desc = page.getByXPath("//a[@class='detailsButton']");
-//	            System.out.println("details size: " + Integer.toString(desc.size()));
 	            
+	            DomNodeList<DomElement> article = page.getElementsByTagName("article");
+	            System.out.println("article size: " + Integer.toString(article.size()));
+
+	            List<HtmlListItem> nextPage = page.getByXPath("//li[@class='nextLink']");
 	            List<String> tempImage = new ArrayList();
-	            for(int x=0; x<resultPerPage; x++) {
-	            	System.out.println("Iterate");
-	            	System.out.println(address.get(x).asText());
-//	            	descPage.add(mainUrl + desc.get(x).getAttribute("href"));
-//	         
-//	                String[] featureList = features.get(x).asText().split("(?<=[0-9])(?=\\s)");
-//	                for(int i=0;i<(featureList.length);i++){
-//	                	featureMap.put(featureList[i].substring(0, featureList[i].length()-2).replaceAll("\\s",""),
-//	                			featureList[i].substring(featureList[i].length()-2).replaceAll("\\s",""));
-//	                }
-//	                // Get Single Image
-////	                DomElement div = container.get(x).getFirstElementChild();
-////	                DomElement media = div.getFirstElementChild();
-////	                DomElement ahref = media.getFirstElementChild();
-////	                DomElement domImage = ahref.getFirstElementChild();
-////	                String image = domImage.getAttribute("src");
-////	                if(image.equalsIgnoreCase("")){
-////	                	String[] temp = domImage.getTextContent().split("\'");
-////	                	image = temp[1];
-////	                }
-//	                //Get Multiple Image
-//	                int count = 1;
-//	                for(DomElement div : container.get(x).getChildElements()){
-//	                	DomElement media = div.getFirstElementChild();
-//	                	DomElement ahref = media.getFirstElementChild();
-//	                	DomElement image = ahref.getLastElementChild();
-//	                	if (count == 1){
-//	                		tempImage.add(image.getAttribute("src"));
-//	                	} else{
-//	                		tempImage.add(image.getAttribute("data-lazyloadsrc"));
-//	                	}
-//	                	count++;
-//	                }
-//	                //Images.add(tempImage);
-//	                Gson gson = new GsonBuilder().registerTypeAdapter(Property.class, new PropertySerializer()).create();
-//	                Property properties = new Property(propId,address.get(x).asText(),price.get(x).asText(),
-//	                		featureMap,tempImage);
-//	                String json = gson.toJson(properties);
-//	                String dirName = mainDirectory +"/" +  Integer.toString(propId);
-//	                mkDir(dirName);
-//	                writeFile(dirName + "/result.json",json);
-////	                saveImage(properties.getImages(),dirName + "/" + Integer.toString(propId) + ".jpg"); Single Image
-//	                for(int i = 0; i<tempImage.size(); i++){
-//	                	saveImage(tempImage.get(i),dirName + "/" + Integer.toString(propId) +"-"+ Integer.toString(i+1) + ".jpg");
-//	                }
-//	                tempImage.clear();
-//	                featureMap.clear();
-//	                propId++;
+
+	            
+	            for(int x=0; x<article.size(); x++) {
+	            	System.out.println("Iterate:" + Integer.toString(x));
+	            	DomElement currentarticle = article.get(x);
+	            	String articleclass = currentarticle.getAttribute("class");
+	            	System.out.println(articleclass);
+	            	
+	            	try{
+//	            		if(!(articleclass.equals("resultBody elite platinum tier1 rui-clearfix") || articleclass.equals("resultBody first elite platinum tier1 rui-clearfix") ||
+//		            			articleclass.equals("resultBody mid-tier platinum tier1 rui-clearfix") || articleclass.equals("resultBody mid-tier tier1 rui-clearfix") ||
+//		            			articleclass.equals("resultBody first mid-tier platinum tier1 rui-clearfix") || articleclass.equals("resultBody featured platinum tier1 rui-clearfix") ||
+//		            			 articleclass.equals("resultBody first featured platinum tier1 rui-clearfix"))){
+//		            		continue;
+//		            	}
+		            	
+		            	if(articleclass.equals("resultBody elite platinum tier1 rui-clearfix") || articleclass.equals("resultBody first elite platinum tier1 rui-clearfix") ||
+		            			articleclass.equals("resultBody mid-tier platinum tier1 rui-clearfix") || articleclass.equals("resultBody mid-tier tier1 rui-clearfix") || 
+		            			articleclass.equals("resultBody first mid-tier platinum tier1 rui-clearfix")){
+		            		
+			            	DomElement header = currentarticle.getFirstElementChild();
+			            	DomElement photoview = header.getNextElementSibling();
+			            	DomElement listinginfo = photoview.getNextElementSibling();
+			            	
+			            	DomElement listerName = listinginfo.getFirstElementChild();
+			            	DomElement propertyStats = listerName.getNextElementSibling();
+			            	DomElement vcard = propertyStats.getNextElementSibling();
+			            	DomElement feature = vcard.getNextElementSibling();
+			            	DomElement button = feature.getNextElementSibling();
+			            	
+			            	DomElement priceParagraph = propertyStats.getFirstElementChild();
+			            	String priceValue = priceParagraph.asText();
+			            	
+			            	DomElement h2 = vcard.getFirstElementChild();
+			            	DomElement ahref = h2.getFirstElementChild();
+			            	String addressValue = ahref.asText();
+			            	
+			            	DomElement detailsButton = button.getLastElementChild();
+			            	String nextPageRef = detailsButton.getAttribute("href");
+			            	descPage.add(mainUrl + nextPageRef);
+			            	
+			            	String[] featureList = feature.asText().split("(?<=[0-9])(?=\\s)");
+			                for(int i=0;i<(featureList.length);i++){
+			                	featureMap.put(featureList[i].substring(0, featureList[i].length()-2).replaceAll("\\s",""),
+			                			featureList[i].substring(featureList[i].length()-2).replaceAll("\\s",""));
+			                }
+			                
+			                DomElement carousel = photoview.getFirstElementChild();
+			                DomElement photobody = carousel.getFirstElementChild();
+			                DomElement viewport = photobody.getFirstElementChild();
+			                DomElement strip = viewport.getFirstElementChild();
+			                
+			              //Get Multiple Image
+			                for(DomElement div : strip.getChildElements()){
+			                	DomElement media = div.getFirstElementChild();
+			                	DomElement href = media.getFirstElementChild();
+			                	DomElement image = href.getLastElementChild();
+		//	                	System.out.println(image);
+			                	String img = image.getAttribute("src");
+			                	if (img.equals(DomElement.ATTRIBUTE_NOT_DEFINED)){
+		//	                		System.out.println("enter data-src");
+			                		img = image.getAttribute("data-src");
+			                	}
+			                	if (img.equals(DomElement.ATTRIBUTE_NOT_DEFINED)){
+		//	                		System.out.println("enter data-lazyloadsrc");
+			                		img = image.getAttribute("data-lazyloadsrc");
+			                	}
+			                	tempImage.add(img);
+			                }
+			            	
+			            	System.out.println(priceValue);
+			            	System.out.println(addressValue);
+			            	System.out.println(featureMap);
+			            	System.out.println("");
+			            	
+			                Gson gson = new GsonBuilder().registerTypeAdapter(Property.class, new PropertySerializer()).create();
+			                Property properties = new Property(propId,addressValue,priceValue,
+			                		featureMap,tempImage);
+			                String json = gson.toJson(properties);
+			                String dirName = mainDirectory +"/" +  Integer.toString(propId);
+			                mkDir(dirName);
+			                writeFile(dirName + "/result.json",json);
+		//	                saveImage(properties.getImages(),dirName + "/" + Integer.toString(propId) + ".jpg"); Single Image
+			                for(int i = 0; i<tempImage.size(); i++){
+		//	                	System.out.println(tempImage.get(i).getClass().getName());
+			                	saveImage(tempImage.get(i),dirName + "/" + Integer.toString(propId) +"-"+ Integer.toString(i+1) + ".jpg");
+			                }
+			                tempImage.clear();
+			                featureMap.clear();
+			                propId++;
+			            	
+		            	} else if(articleclass.equals("resultBody featured platinum tier1 rui-clearfix") || articleclass.equals("resultBody first featured platinum tier1 rui-clearfix")){
+		            		
+		            		DomElement header = currentarticle.getFirstElementChild();
+			            	DomElement photoview = header.getNextElementSibling();
+			            	DomElement listinginfo = photoview.getNextElementSibling();
+			            	
+			            	DomElement listerDiv = listinginfo.getFirstElementChild();
+			            	DomElement propertyStats = listerDiv.getFirstElementChild();
+			            	DomElement vcard = propertyStats.getNextElementSibling();
+			            	DomElement feature = vcard.getNextElementSibling();
+			            	DomElement button = feature.getNextElementSibling();
+			            	
+			            	DomElement priceParagraph = propertyStats.getFirstElementChild();
+			            	String priceValue = priceParagraph.asText();
+			            	
+			            	DomElement h2 = vcard.getFirstElementChild();
+			            	DomElement ahref = h2.getFirstElementChild();
+			            	String addressValue = ahref.asText();
+			            	
+			            	DomElement detailsButton = button.getLastElementChild();
+			            	String nextPageRef = detailsButton.getAttribute("href");
+			            	descPage.add(mainUrl + nextPageRef);
+			            	
+			            	String[] featureList = feature.asText().split("(?<=[0-9])(?=\\s)");
+			                for(int i=0;i<(featureList.length);i++){
+			                	featureMap.put(featureList[i].substring(0, featureList[i].length()-2).replaceAll("\\s",""),
+			                			featureList[i].substring(featureList[i].length()-2).replaceAll("\\s",""));
+			                }
+			                
+			                DomElement carousel = photoview.getFirstElementChild();
+			                DomElement photobody = carousel.getFirstElementChild();
+			                DomElement viewport = photobody.getFirstElementChild();
+			                DomElement strip = viewport.getFirstElementChild();
+			                
+			              //Get Multiple Image
+			                for(DomElement div : strip.getChildElements()){
+			                	DomElement media = div.getFirstElementChild();
+			                	DomElement href = media.getFirstElementChild();
+			                	DomElement image = href.getLastElementChild();
+		//	                	System.out.println(image);
+			                	String img = image.getAttribute("src");
+			                	if (img.equals(DomElement.ATTRIBUTE_NOT_DEFINED)){
+		//	                		System.out.println("enter data-src");
+			                		img = image.getAttribute("data-src");
+			                	}
+			                	if (img.equals(DomElement.ATTRIBUTE_NOT_DEFINED)){
+		//	                		System.out.println("enter data-lazyloadsrc");
+			                		img = image.getAttribute("data-lazyloadsrc");
+			                	}
+			                	tempImage.add(img);
+			                }
+			            	
+			            	System.out.println(priceValue);
+			            	System.out.println(addressValue);
+			            	System.out.println(featureMap);
+			            	System.out.println("");
+			            	
+			            	Gson gson = new GsonBuilder().registerTypeAdapter(Property.class, new PropertySerializer()).create();
+			                Property properties = new Property(propId,addressValue,priceValue,
+			                		featureMap,tempImage);
+			                String json = gson.toJson(properties);
+			                String dirName = mainDirectory +"/" +  Integer.toString(propId);
+			                mkDir(dirName);
+			                writeFile(dirName + "/result.json",json);
+		//	                saveImage(properties.getImages(),dirName + "/" + Integer.toString(propId) + ".jpg"); Single Image
+			                for(int i = 0; i<tempImage.size(); i++){
+		//	                	System.out.println(tempImage.get(i).getClass().getName());
+			                	saveImage(tempImage.get(i),dirName + "/" + Integer.toString(propId) +"-"+ Integer.toString(i+1) + ".jpg");
+			                }
+			                tempImage.clear();
+			                featureMap.clear();
+			                propId++;
+		            	} else{
+		            		continue;
+		            	}
+	            		
+	            	} catch(Exception ex){
+	            		System.out.println(ex.getMessage());
+	            		continue;
+	            	}
+	            	
 	            }
 	            DomElement link = nextPage.get(0).getFirstElementChild();
 	            crawledPage.add(mainUrl + link.getAttribute("href"));
@@ -172,34 +295,58 @@ public class Retrieval {
             }
         	
         	
-        } catch (IOException ex ) {
-            ex.printStackTrace();
-        }
-        crawledPage.clear();
-        System.out.println(descPage);
-        crawledPage.addAll(descPage);
-        System.out.println(crawledPage);
-        WebClient webClient2 = new WebClient(BrowserVersion.FIREFOX_52);
-        System.out.println(crawledPage.get(0));
-        try{
-        	for(int i = 0; i<crawledPage.size();i++){
-            	HtmlPage page = webClient2.getPage(crawledPage.get(i));
-            	List<HtmlParagraph> title = page.getByXPath("//p[@class='title']");
-            	List<HtmlParagraph> body = page.getByXPath("//p[@class='body']");
-            	PropertyDescription propDesc = new PropertyDescription(i+1,title.get(0).asText(),body.get(0).asText());
-            	System.out.println(propDesc.getTitle());
-            	System.out.println(propDesc.getBody());
-            	Gson gson = new GsonBuilder().registerTypeAdapter(PropertyDescription.class, new PropDescSerializer()).create();
-            	String json = gson.toJson(propDesc);
-            	String dirName = mainDirectory +"/" +  Integer.toString(i+1);
-            	writeFile(dirName + "/result-desc.json",json);
-            }
-        } catch (IOException ex) {
-        	ex.printStackTrace();
+        } catch (Exception ex ) {
+        	System.out.println(ex.getMessage());
+        } finally{
+        	crawledPage.clear();
+//          System.out.println(descPage);
+          crawledPage.addAll(descPage);
+//          System.out.println(crawledPage);
+          WebClient webClient2 = new WebClient(BrowserVersion.BEST_SUPPORTED);
+          String docUrl = "https://www.realestate.com.au/";
+//          System.out.println(crawledPage.get(0));
+          try{
+          	for(int i = 0; i<crawledPage.size();i++){
+//          		System.out.println(crawledPage.get(i));
+          		String[] urlList = crawledPage.get(i).split("/");
+          		String finalUrl = docUrl + urlList[3];
+          		System.out.println("final url: " + finalUrl);
+          		String content = "";
+          		URL pageurl = new URL(finalUrl);
+          		URLConnection conn = pageurl.openConnection();
+
+      			// open the stream and put it into BufferedReader
+      			BufferedReader br = new BufferedReader(
+                                     new InputStreamReader(conn.getInputStream()));
+
+      			String inputLine;
+      			while ((inputLine = br.readLine()) != null) {
+      				content+= inputLine + "\n";
+      			}
+      			br.close();
+//      			System.out.println(content);
+//              	HtmlPage page = webClient2.getPage(finalUrl);
+//              	System.out.println(page.asText());
+//              	List<HtmlParagraph> title = page.getByXPath("//p[@class='title']");
+//              	List<HtmlParagraph> body = page.getByXPath("//p[@class='body']");
+//              	PropertyDescription propDesc = new PropertyDescription(i+1,title.get(0).asText(),body.get(0).asText());
+//              	System.out.println(propDesc.getTitle());
+//              	System.out.println(propDesc.getBody());
+//              	Gson gson = new GsonBuilder().registerTypeAdapter(PropertyDescription.class, new PropDescSerializer()).create();
+//              	String json = gson.toJson(propDesc);
+              	String dirName = mainDirectory +"/" +  Integer.toString(i+1);
+              	writeFile(dirName + "/result-desc.txt",content);
+              }
+          	 System.out.println("Succesfully Retrieved");
+          } catch (Exception ex) {
+          	System.out.println(ex.getMessage());
+          	System.out.println("Exited with error!");
+          }
+          
+          
+         
         }
         
-        
-        System.out.println("Succesfully Retrieved");
     }
 
 }
